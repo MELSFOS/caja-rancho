@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Migrar datos</title>
+<style>
+  body { font-family: sans-serif; background: #f4efe6; padding: 24px 16px; color: #241f14; max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin-bottom: 6px; }
+  p  { font-size: 0.85rem; color: #7a6e58; margin-bottom: 20px; }
+  .btn { display: block; width: 100%; padding: 14px; background: #b5651d; color: #fff; border: none; border-radius: 9px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
+  .btn:disabled { background: #c8a882; cursor: not-allowed; }
+  .log { background: #241f14; color: #a8e6cf; border-radius: 10px; padding: 16px; font-size: 0.75rem; font-family: monospace; white-space: pre-wrap; min-height: 100px; margin-top: 16px; }
+  .ok   { color: #a8e6cf; }
+  .err  { color: #ffb3b3; }
+  .info { color: #ffd580; }
+  .resumen { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 16px; border: 1px solid #d4c9b0; }
+  .resumen h2 { font-size: 1rem; margin-bottom: 8px; }
+  .resumen p  { margin: 0; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<h1>🌿 Migrar datos a Supabase</h1>
+
+<div class="resumen">
+  <h2>Resumen de datos a migrar</h2>
+  <p>📥 Entradas: <strong>3</strong> ($137,000.00)</p>
+  <p>📤 Salidas: <strong>73</strong> ($95,940.00)</p>
+  <p>💰 Saldo: <strong>$41,060.00</strong></p>
+  <p>📋 Total: <strong>76 movimientos</strong></p>
+</div>
+
+<button class="btn" id="btn-migrar" onclick="migrar()">🚀 Insertar todos los datos en Supabase</button>
+<div class="log" id="log">Presiona el botón para iniciar la migración...</div>
+
+<script>
+const SB_URL = 'https://fncqfmqqdwohvyksrbka.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuY3FmbXFxZHdvaHZ5a3NyYmthIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MzM3ODksImV4cCI6MjA5NTUwOTc4OX0.kC7_CQ5KYMXNlrGdYkYrk4MmK9jLh7uxjWfMCEXn7YA';
+
+const movimientos = [
+  {id:1746000001,tipo:'entrada',fecha:'2026-04-28',concepto:'Venta semental',monto:50000,persona:'EFS',nota:''},
+  {id:1746000002,tipo:'entrada',fecha:'2026-04-28',concepto:'Venta semental SE',monto:57500,persona:'EFS',nota:''},
+  {id:1746000003,tipo:'salida',fecha:'2026-04-28',concepto:'Telmex EFS abril',monto:389,persona:'Melissa',nota:''},
+  {id:1746000004,tipo:'salida',fecha:'2026-04-28',concepto:'Telmex abril tita',monto:698,persona:'Melissa',nota:''},
+  {id:1746100001,tipo:'salida',fecha:'2026-04-29',concepto:'2 camisas unitam de 390 c/u Tita y EFS',monto:780,persona:'Melissa',nota:''},
+  {id:1746100002,tipo:'salida',fecha:'2026-04-29',concepto:'Ventilador solar',monto:1050,persona:'Melissa',nota:''},
+  {id:1746200001,tipo:'salida',fecha:'2026-04-30',concepto:'Silla desplegable Tita costco',monto:1200,persona:'Melissa',nota:''},
+  {id:1746200002,tipo:'salida',fecha:'2026-04-30',concepto:'2 ventiladores casa EFS Costco',monto:1600,persona:'Melissa',nota:''},
+  {id:1746300001,tipo:'salida',fecha:'2026-05-01',concepto:'3 frascos ECP para protocolo cliente caduco',monto:500,persona:'Moises',nota:''},
+  {id:1746400001,tipo:'salida',fecha:'2026-05-02',concepto:'Raya alazan',monto:3500,persona:'Nicasio Sánchez',nota:''},
+  {id:1746400002,tipo:'salida',fecha:'2026-05-02',concepto:'Raya Rubén Soto Márquez',monto:2100,persona:'Ruben Soto',nota:''},
+  {id:1746400003,tipo:'salida',fecha:'2026-05-02',concepto:'Raya 7 días a Tony en feria Puebla',monto:2100,persona:'EFI',nota:''},
+  {id:1746500001,tipo:'salida',fecha:'2026-05-04',concepto:'Para EFS',monto:1500,persona:'EFS',nota:''},
+  {id:1746500002,tipo:'salida',fecha:'2026-05-04',concepto:'Bordado de las 2 camisas',monto:340,persona:'Melissa',nota:''},
+  {id:1746600001,tipo:'salida',fecha:'2026-05-05',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1746600002,tipo:'salida',fecha:'2026-05-05',concepto:'Chicote ford negra',monto:500,persona:'Moisés',nota:''},
+  {id:1746600003,tipo:'salida',fecha:'2026-05-05',concepto:'Pantalón MIV',monto:400,persona:'MIV',nota:''},
+  {id:1746600004,tipo:'salida',fecha:'2026-05-05',concepto:'Pastillas migraña MIV',monto:100,persona:'MIV',nota:''},
+  {id:1746700001,tipo:'salida',fecha:'2026-05-06',concepto:'Ida a comida feria puebla Gober',monto:5000,persona:'EFS',nota:''},
+  {id:1746800001,tipo:'salida',fecha:'2026-05-07',concepto:'Gasolina roja grande ida feria puebla',monto:1320,persona:'Melissa',nota:''},
+  {id:1746800002,tipo:'salida',fecha:'2026-05-07',concepto:'Uber regreso museo amparo a hotel',monto:60,persona:'Melissa',nota:''},
+  {id:1746800003,tipo:'salida',fecha:'2026-05-07',concepto:'Recarga Telcel MIV',monto:200,persona:'Melissa',nota:''},
+  {id:1746800004,tipo:'salida',fecha:'2026-05-07',concepto:'Pago préstamo Melissa',monto:5000,persona:'Melissa',nota:''},
+  {id:1746900001,tipo:'salida',fecha:'2026-05-08',concepto:'Ida servicio a ixhuatlan EFS',monto:1000,persona:'EFS',nota:''},
+  {id:1746900002,tipo:'salida',fecha:'2026-05-08',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1746900003,tipo:'salida',fecha:'2026-05-08',concepto:'Plan Telcel EFS',monto:938,persona:'Melissa',nota:''},
+  {id:1747000001,tipo:'salida',fecha:'2026-05-09',concepto:'Raya alazan',monto:3500,persona:'Nicasio Sánchez',nota:''},
+  {id:1747000002,tipo:'salida',fecha:'2026-05-09',concepto:'Raya Rancho La Esperanza',monto:8000,persona:'EFS',nota:''},
+  {id:1747000003,tipo:'salida',fecha:'2026-05-09',concepto:'Casa MIV',monto:200,persona:'MIV',nota:''},
+  {id:1747000004,tipo:'salida',fecha:'2026-05-09',concepto:'Croquetas 2 kg rocky',monto:75,persona:'Melissa',nota:''},
+  {id:1747000005,tipo:'salida',fecha:'2026-05-09',concepto:'Jabón vish, cloro, esponja de trastes La Esperanza',monto:100,persona:'Melissa',nota:''},
+  {id:1747000006,tipo:'salida',fecha:'2026-05-09',concepto:'1/4 Barra hielo para La Esperanza',monto:50,persona:'Melissa',nota:''},
+  {id:1747000007,tipo:'salida',fecha:'2026-05-09',concepto:'3 refrescos para rancho la esperanza',monto:150,persona:'Melissa',nota:''},
+  {id:1747000008,tipo:'salida',fecha:'2026-05-09',concepto:'Fruta Tita y fruta regresar cazuela tía Yola',monto:165,persona:'Melissa',nota:''},
+  {id:1747100001,tipo:'salida',fecha:'2026-05-10',concepto:'Abono de préstamo a EFI',monto:5000,persona:'EFI',nota:''},
+  {id:1747200001,tipo:'salida',fecha:'2026-05-12',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1747200002,tipo:'salida',fecha:'2026-05-12',concepto:'Pastillas MIV',monto:260,persona:'MIV',nota:''},
+  {id:1747300001,tipo:'salida',fecha:'2026-05-13',concepto:'Telmex EFS MAYO',monto:389,persona:'Melissa',nota:''},
+  {id:1747300002,tipo:'salida',fecha:'2026-05-13',concepto:'Telmex Tita Mayo',monto:745,persona:'Melissa',nota:''},
+  {id:1747300003,tipo:'salida',fecha:'2026-05-13',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1747300004,tipo:'salida',fecha:'2026-05-13',concepto:'Ida EFS Rancho la esperanza',monto:500,persona:'EFS',nota:''},
+  {id:1747300005,tipo:'salida',fecha:'2026-05-13',concepto:'Jeringas 2 cajas de 100 piezas',monto:398,persona:'MIV',nota:''},
+  {id:1747400001,tipo:'salida',fecha:'2026-05-14',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1747400002,tipo:'salida',fecha:'2026-05-14',concepto:'Cubre hojas + hojas blancas',monto:228,persona:'MIV',nota:''},
+  {id:1747400003,tipo:'salida',fecha:'2026-05-14',concepto:'Documentación 4 becerros de hace 1 año',monto:190,persona:'MIV',nota:''},
+  {id:1747400004,tipo:'salida',fecha:'2026-05-14',concepto:'4 muestras de laboratorio',monto:60,persona:'MIV',nota:''},
+  {id:1747500001,tipo:'salida',fecha:'2026-05-15',concepto:'Cena y gastos EFS',monto:500,persona:'EFS',nota:''},
+  {id:1747500002,tipo:'salida',fecha:'2026-05-15',concepto:'Alimento para ganado rancho la esperanza',monto:6000,persona:'EFS',nota:''},
+  {id:1747500003,tipo:'salida',fecha:'2026-05-15',concepto:'Stop On, jeringas 10 y 20 ml, lepecid, furacine, jabón líquido Rancho La Esperanza',monto:1500,persona:'EFS',nota:''},
+  {id:1747600001,tipo:'salida',fecha:'2026-05-16',concepto:'Raya La Esperanza',monto:8000,persona:'EFS',nota:''},
+  {id:1747600002,tipo:'salida',fecha:'2026-05-16',concepto:'Batería solar recargable para Tony',monto:500,persona:'Melissa',nota:''},
+  {id:1747600003,tipo:'salida',fecha:'2026-05-16',concepto:'3 caballos Herrados Cuco - Muñeca, colorada, marlboro',monto:1200,persona:'Melissa',nota:''},
+  {id:1747700001,tipo:'salida',fecha:'2026-05-17',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1747700002,tipo:'salida',fecha:'2026-05-17',concepto:'Frutas plaza xico y bolillos',monto:280,persona:'Melissa',nota:''},
+  {id:1747800001,tipo:'salida',fecha:'2026-05-18',concepto:'Préstamo Agustín',monto:500,persona:'MIV',nota:''},
+  {id:1747900001,tipo:'salida',fecha:'2026-05-19',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1747900002,tipo:'salida',fecha:'2026-05-19',concepto:'101 muestra laboratorio Cristóbal y Casillas',monto:1015,persona:'MIV',nota:''},
+  {id:1748000001,tipo:'salida',fecha:'2026-05-20',concepto:'Ida Anahuac EFS',monto:1000,persona:'EFS',nota:''},
+  {id:1748000002,tipo:'salida',fecha:'2026-05-20',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748100001,tipo:'salida',fecha:'2026-05-21',concepto:'Gastos EFS para servicio a rancho Cristóbal',monto:1000,persona:'EFS',nota:''},
+  {id:1748100002,tipo:'salida',fecha:'2026-05-21',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748100003,tipo:'salida',fecha:'2026-05-21',concepto:'Thiner para pintura tanque agua casa',monto:60,persona:'MIV',nota:''},
+  {id:1748200001,tipo:'salida',fecha:'2026-05-22',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748200002,tipo:'salida',fecha:'2026-05-22',concepto:'Salida EFS doña inseminar',monto:1000,persona:'EFS',nota:''},
+  {id:1748200003,tipo:'salida',fecha:'2026-05-22',concepto:'Transferencia a EFS',monto:400,persona:'EFS',nota:''},
+  {id:1748300001,tipo:'salida',fecha:'2026-05-23',concepto:'Ida Anahuac muestreo EFS',monto:500,persona:'EFS',nota:''},
+  {id:1748300002,tipo:'salida',fecha:'2026-05-23',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748300003,tipo:'salida',fecha:'2026-05-23',concepto:'Desis, protector cel MIV',monto:700,persona:'MIV',nota:'Revisar cambio'},
+  {id:1748300004,tipo:'salida',fecha:'2026-05-23',concepto:'Raya Alazan',monto:3500,persona:'EFS',nota:''},
+  {id:1748300005,tipo:'salida',fecha:'2026-05-23',concepto:'Raya Esperanza',monto:12000,persona:'EFS',nota:'Revisar cambio y que compre en farmacia ganadera'},
+  {id:1748400001,tipo:'salida',fecha:'2026-05-24',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748500001,tipo:'salida',fecha:'2026-05-25',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748500002,tipo:'salida',fecha:'2026-05-25',concepto:'Entrega certificados Cristobal Adam',monto:1500,persona:'EFS',nota:''},
+  {id:1748600001,tipo:'salida',fecha:'2026-05-26',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748700001,tipo:'salida',fecha:'2026-05-27',concepto:'Casa MIV',monto:300,persona:'MIV',nota:''},
+  {id:1748800001,tipo:'entrada',fecha:'2026-05-28',concepto:'Abono Muestreo Cristóbal Adam',monto:29500,persona:'EFS',nota:''},
+];
+
+function log(msg, tipo='info') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${tipo}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function migrar() {
+  const btn = document.getElementById('btn-migrar');
+  btn.disabled = true;
+  btn.textContent = 'Migrando...';
+  document.getElementById('log').innerHTML = '';
+  log(`Iniciando migración de ${movimientos.length} movimientos...`);
+
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/movimientos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(movimientos)
+    });
+
+    if (res.ok) {
+      log(`✅ ¡Listo! Los ${movimientos.length} movimientos fueron guardados en Supabase.`, 'ok');
+      log(`💰 Saldo: $41,060.00`, 'ok');
+      log(`\nAhora abre la app en GitHub y verifica que aparezcan todos los datos.`, 'ok');
+      btn.textContent = '✅ Migración completada';
+    } else {
+      const txt = await res.text();
+      log(`❌ Error ${res.status}: ${txt}`, 'err');
+      btn.disabled = false;
+      btn.textContent = 'Reintentar';
+    }
+  } catch(e) {
+    log(`❌ Error de conexión: ${e.message}`, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Reintentar';
+  }
+}
+</script>
+</body>
+</html>
