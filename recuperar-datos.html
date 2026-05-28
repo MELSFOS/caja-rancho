@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Recuperar datos</title>
+<style>
+  body { font-family: sans-serif; background: #f4efe6; padding: 24px 16px; color: #241f14; }
+  h1 { font-size: 1.3rem; margin-bottom: 6px; }
+  p  { font-size: 0.85rem; color: #7a6e58; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .tipo { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+  .tipo.entrada { color: #2d6a4f; }
+  .tipo.salida  { color: #9b2226; }
+  .concepto { font-weight: 600; font-size: 0.95rem; }
+  .meta { font-size: 0.78rem; color: #7a6e58; margin-top: 4px; }
+  .monto { font-family: monospace; font-size: 1rem; font-weight: 600; float: right; }
+  .monto.entrada { color: #2d6a4f; }
+  .monto.salida  { color: #9b2226; }
+  .empty { text-align: center; padding: 40px; color: #7a6e58; }
+  .raw { background: #241f14; color: #a8e6cf; border-radius: 10px; padding: 16px; font-size: 0.72rem; word-break: break-all; margin-top: 20px; white-space: pre-wrap; }
+  .btn { display: block; width: 100%; padding: 13px; background: #b5651d; color: #fff; border: none; border-radius: 9px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 16px; }
+  .saldo { background: #b5651d; color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+  .saldo-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+  .saldo-val { font-family: monospace; font-size: 1.8rem; font-weight: 600; }
+  .totales { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .tot { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 8px 12px; }
+  .tot-lbl { font-size: 0.62rem; text-transform: uppercase; opacity: 0.65; }
+  .tot-val { font-family: monospace; font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<h1>🌿 Recuperar datos</h1>
+<p>Este archivo lee el localStorage de este navegador en este dispositivo.</p>
+
+<div id="contenido"></div>
+
+<script>
+const KEY = 'caja_rancho_v1';
+const raw = localStorage.getItem(KEY);
+const cont = document.getElementById('contenido');
+
+if (!raw) {
+  cont.innerHTML = `
+    <div class="empty">
+      <p style="font-size:1rem">⚠️ No se encontraron datos con la clave <strong>caja_rancho_v1</strong> en este navegador.</p>
+      <p>Asegúrate de abrir este archivo en el mismo Safari donde usabas la app de Netlify.</p>
+    </div>
+    <div class="raw">localStorage vacío o clave no encontrada.\n\nClaves disponibles:\n${Object.keys(localStorage).join('\n') || '(ninguna)'}</div>`;
+} else {
+  let datos;
+  try { datos = JSON.parse(raw); } catch(e) { datos = []; }
+
+  if (!datos.length) {
+    cont.innerHTML = '<div class="empty">Se encontró la clave pero no hay registros.</div>';
+  } else {
+    const entradas = datos.filter(d=>d.tipo==='entrada').reduce((a,d)=>a+parseFloat(d.monto),0);
+    const salidas  = datos.filter(d=>d.tipo==='salida').reduce((a,d)=>a+parseFloat(d.monto),0);
+    const saldo    = entradas - salidas;
+    const fmt = n => '$'+Math.abs(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const fmtF = f => { const [y,m,d]=f.split('-'); return `${parseInt(d)} ${meses[parseInt(m)-1]} ${y}`; };
+
+    let html = `
+      <div class="saldo">
+        <div class="saldo-lbl">Saldo</div>
+        <div class="saldo-val">${fmt(saldo)}</div>
+        <div class="totales">
+          <div class="tot"><div class="tot-lbl">Entradas</div><div class="tot-val">${fmt(entradas)}</div></div>
+          <div class="tot"><div class="tot-lbl">Salidas</div><div class="tot-val">${fmt(salidas)}</div></div>
+        </div>
+      </div>
+      <p><strong>${datos.length} movimientos encontrados</strong> — cópialos abajo y mándamelos para migrarlos a Supabase.</p>`;
+
+    datos.sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(d => {
+      html += `
+        <div class="card">
+          <span class="monto ${d.tipo}">${d.tipo==='entrada'?'+':'-'}${fmt(d.monto)}</span>
+          <div class="tipo ${d.tipo}">${d.tipo==='entrada'?'↑ Entrada':'↓ Salida'}</div>
+          <div class="concepto">${d.concepto}</div>
+          <div class="meta">${fmtF(d.fecha)}${d.persona?' · 👤 '+d.persona:''}${d.nota?' · 📝 '+d.nota:''}</div>
+        </div>`;
+    });
+
+    html += `
+      <p style="margin-top:20px;font-size:0.8rem;color:#7a6e58">Datos en formato JSON (cópialos y mándamelos):</p>
+      <div class="raw">${raw}</div>
+      <button class="btn" onclick="copiar()">📋 Copiar todos los datos</button>`;
+
+    cont.innerHTML = html;
+  }
+}
+
+function copiar() {
+  const raw = localStorage.getItem('caja_rancho_v1') || '';
+  navigator.clipboard.writeText(raw).then(()=>{
+    alert('✅ Datos copiados — pégalos en el chat');
+  }).catch(()=>{
+    alert('No se pudo copiar automáticamente. Selecciona el texto en el cuadro negro y cópialo manualmente.');
+  });
+}
+</script>
+</body>
+</html>
